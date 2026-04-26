@@ -188,6 +188,29 @@ resource "tfe_variable" "tfc_aws_workload_identity_audience" {
   description  = "OIDC audience expected by the AWS IAM trust policy."
 }
 
+resource "tfe_variable" "custom" {
+  for_each = local.custom_workspace_variable_map
+
+  workspace_id = tfe_workspace.this[each.value.environment].id
+  key          = each.value.key
+  value        = each.value.value
+  category     = each.value.category
+  sensitive    = each.value.sensitive
+  description  = each.value.description
+
+  lifecycle {
+    precondition {
+      condition     = length(local.custom_workspace_variable_keys) == length(distinct(local.custom_workspace_variable_keys))
+      error_message = "workspace.variables must not contain duplicate key/type pairs after module-level and environment-level variables are combined."
+    }
+
+    precondition {
+      condition     = length(local.custom_workspace_variable_reserved_key_conflicts) == 0
+      error_message = "workspace.variables cannot define env variables managed by the module: AWS_REGION, TFC_AWS_PROVIDER_AUTH, TFC_AWS_RUN_ROLE_ARN, or TFC_AWS_WORKLOAD_IDENTITY_AUDIENCE."
+    }
+  }
+}
+
 resource "github_repository_environment" "this" {
   for_each = local.terraform_environments
 

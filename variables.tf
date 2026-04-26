@@ -82,6 +82,13 @@ variable "environments" {
         trigger_patterns           = optional(list(string))
         trigger_prefixes           = optional(list(string))
       }))
+      variables = optional(list(object({
+        key         = string
+        value       = string
+        type        = optional(string, "terraform")
+        sensitive   = optional(bool, false)
+        description = optional(string)
+      })), [])
       manage_variables      = optional(bool)
       hcp_terraform_subject = optional(string)
     }))
@@ -124,6 +131,27 @@ variable "environments" {
       )
     ])
     error_message = "Each environment workspace.vcs_repo must set exactly one of oauth_token_id or github_app_installation_id when set."
+  }
+
+  validation {
+    condition = alltrue(flatten([
+      for _, config in var.environments : [
+        for variable in try(config.workspace.variables, []) :
+        length(trimspace(variable.key)) > 0 && contains(["env", "terraform"], variable.type)
+      ]
+    ]))
+    error_message = "Each environment workspace.variables entry must include a non-blank key and type must be env or terraform."
+  }
+
+  validation {
+    condition = alltrue([
+      for _, config in var.environments :
+      length(distinct([
+        for variable in try(config.workspace.variables, []) :
+        "${variable.type}:${variable.key}"
+      ])) == length(try(config.workspace.variables, []))
+    ])
+    error_message = "Each environment workspace.variables list must not contain duplicate key/type pairs."
   }
 }
 
@@ -189,6 +217,13 @@ variable "workspace" {
       trigger_patterns           = optional(list(string))
       trigger_prefixes           = optional(list(string))
     }))
+    variables = optional(list(object({
+      key         = string
+      value       = string
+      type        = optional(string, "terraform")
+      sensitive   = optional(bool, false)
+      description = optional(string)
+    })), [])
     manage_variables      = optional(bool, true)
     hcp_terraform_subject = optional(string)
   })
@@ -206,5 +241,21 @@ variable "workspace" {
       (try(var.workspace.vcs_repo.github_app_installation_id, null) != null)
     )
     error_message = "workspace.vcs_repo must set exactly one of oauth_token_id or github_app_installation_id."
+  }
+
+  validation {
+    condition = alltrue([
+      for variable in var.workspace.variables :
+      length(trimspace(variable.key)) > 0 && contains(["env", "terraform"], variable.type)
+    ])
+    error_message = "workspace.variables entries must include a non-blank key and type must be env or terraform."
+  }
+
+  validation {
+    condition = length(distinct([
+      for variable in var.workspace.variables :
+      "${variable.type}:${variable.key}"
+    ])) == length(var.workspace.variables)
+    error_message = "workspace.variables must not contain duplicate key/type pairs."
   }
 }

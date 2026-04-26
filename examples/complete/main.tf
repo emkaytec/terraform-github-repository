@@ -97,6 +97,15 @@ module "repo" {
           trigger_patterns           = ["terraform/**/*.tf"]
           trigger_prefixes           = ["terraform/"]
         }
+        variables = [
+          {
+            key         = "custom-env-var-for-this-repo"
+            value       = "test1094519042"
+            type        = "env"
+            sensitive   = false
+            description = "Example environment variable scoped to the admin workspace."
+          }
+        ]
         manage_variables      = true
         hcp_terraform_subject = "organization:${var.tfe_organization}:project:platform:workspace:complete-service-admin:run_phase:*"
       }
@@ -156,6 +165,15 @@ module "repo" {
       trigger_patterns           = ["terraform/**/*.tf"]
       trigger_prefixes           = ["terraform/"]
     }
+    variables = [
+      {
+        key         = "custom-key-for-this-repo"
+        value       = "example123456"
+        type        = "terraform"
+        sensitive   = true
+        description = "Example Terraform variable created in each managed workspace."
+      }
+    ]
     manage_variables      = true
     hcp_terraform_subject = null
   }

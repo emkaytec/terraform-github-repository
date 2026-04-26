@@ -19,12 +19,31 @@ run "explicit_workspace_name_drives_provisioner_role_name" {
         }
         workspace = {
           name = "custom-admin-workspace"
+          variables = [
+            {
+              key       = "CUSTOM_ADMIN_ENV"
+              value     = "admin-value"
+              type      = "env"
+              sensitive = false
+            }
+          ]
         }
       }
     }
 
     aws = {
       stack_set_administration_role_arn = "arn:aws:iam::999999999999:role/AWSCloudFormationStackSetAdministrationRole"
+    }
+
+    workspace = {
+      variables = [
+        {
+          key       = "custom_workspace_variable"
+          value     = "workspace-value"
+          type      = "terraform"
+          sensitive = true
+        }
+      ]
     }
   }
 
@@ -46,5 +65,20 @@ run "explicit_workspace_name_drives_provisioner_role_name" {
   assert {
     condition     = output.stack_sets.admin.name == "custom-admin-workspace-provisioner-roles"
     error_message = "Expected the explicit workspace.name to drive the StackSet name."
+  }
+
+  assert {
+    condition     = tfe_variable.custom["admin:terraform:custom_workspace_variable:0"].category == "terraform"
+    error_message = "Expected module-level custom Terraform variables to be created in the workspace."
+  }
+
+  assert {
+    condition     = tfe_variable.custom["admin:terraform:custom_workspace_variable:0"].sensitive == true
+    error_message = "Expected custom Terraform variable sensitivity to be preserved."
+  }
+
+  assert {
+    condition     = tfe_variable.custom["admin:env:CUSTOM_ADMIN_ENV:1"].category == "env"
+    error_message = "Expected environment-level custom env variables to be created in the workspace."
   }
 }

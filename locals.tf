@@ -20,6 +20,7 @@ locals {
       working_directory   = try(coalesce(try(config.workspace.working_directory, null), var.workspace.working_directory), null)
       tags                = try(coalesce(try(config.workspace.tags, null), var.workspace.tags), null)
       manage_variables    = try(coalesce(try(config.workspace.manage_variables, null), var.workspace.manage_variables), null)
+      variables           = concat(var.workspace.variables, try(config.workspace.variables, []))
 
       hcp_terraform_subject = try(coalesce(
         try(config.workspace.hcp_terraform_subject, null),
@@ -130,5 +131,41 @@ locals {
     for environment, workspace in local.environment_workspace_inputs :
     environment => workspace
     if coalesce(workspace.manage_variables, true)
+  }
+
+  generated_tfe_env_variable_keys = [
+    "AWS_REGION",
+    "TFC_AWS_PROVIDER_AUTH",
+    "TFC_AWS_RUN_ROLE_ARN",
+    "TFC_AWS_WORKLOAD_IDENTITY_AUDIENCE",
+  ]
+
+  custom_workspace_variables = flatten([
+    for environment, workspace in local.managed_variable_environments : [
+      for variable in workspace.variables : {
+        environment = environment
+        key         = variable.key
+        value       = variable.value
+        category    = variable.type
+        sensitive   = variable.sensitive
+        description = try(variable.description, null)
+      }
+    ]
+  ])
+
+  custom_workspace_variable_keys = [
+    for variable in local.custom_workspace_variables :
+    "${variable.environment}:${variable.category}:${variable.key}"
+  ]
+
+  custom_workspace_variable_reserved_key_conflicts = [
+    for variable in local.custom_workspace_variables :
+    "${variable.environment}:${variable.category}:${variable.key}"
+    if variable.category == "env" && contains(local.generated_tfe_env_variable_keys, variable.key)
+  ]
+
+  custom_workspace_variable_map = {
+    for index, variable in local.custom_workspace_variables :
+    "${variable.environment}:${variable.category}:${variable.key}:${index}" => variable
   }
 }
