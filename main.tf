@@ -146,26 +146,6 @@ resource "aws_cloudformation_stack_set_instance" "provisioner_roles" {
   }
 }
 
-resource "tfe_variable" "account_id" {
-  for_each = local.managed_variable_environments
-
-  workspace_id = tfe_workspace.this[each.key].id
-  key          = "account_id"
-  value        = local.terraform_environments[each.key].aws.account_id
-  category     = "terraform"
-  description  = "AWS account ID for this workspace environment."
-}
-
-resource "tfe_variable" "aws_region" {
-  for_each = local.managed_variable_environments
-
-  workspace_id = tfe_workspace.this[each.key].id
-  key          = "aws_region"
-  value        = local.environment_regions[each.key]
-  category     = "terraform"
-  description  = "AWS region for this workspace environment."
-}
-
 resource "tfe_variable" "aws_region_env" {
   for_each = local.managed_variable_environments
 
